@@ -16,27 +16,40 @@ import gc
 import xml.parsers.expat
 
 
-class ArgParseException(Exception):
-    pass
-
 
 class MyMapWindow(MapWindow):
+
+    #override init
+    def __init__(self, _controller):
+        MapWindow.__init__(self, _controller)
+        self.go_button = gtk.Button.new_with_label("Go")
+
+    #override show window
     def show_window(self, init_width, init_height):
         """Create the initial window."""
         win = gtk.Window()
         win.set_name("Ground Station")
         win.connect("destroy", self.graceful_exit)
         win.set_border_width(5)
+        
 
-        vbox = gtk.VBox(spacing=3)
-        win.add(vbox)
+        grid = gtk.Grid()
+        win.add(grid)
 
         self.drawing_area = gtk.DrawingArea()
         # There doesn't seem to be any way to resize a window below
         # the initial size of the drawing area. So make the drawing area
         # initially tiny, then just before showing we'll resize the window.
         # self.drawing_area.size(10, 10)
-        vbox.pack_start(self.drawing_area)
+        grid.attach(self.drawing_area,0,0,25,25)
+        grid.attach_next_to(self.go_button,self.drawing_area,gtk.PositionType.BOTTOM,25,1)
+
+        self.go_button.set_hexpand(True)
+        self.drawing_area.set_vexpand(True)
+        self.go_button.set_vexpand(False)
+
+
+        self.go_button.connect("clicked", self.go_to_location)
 
         self.drawing_area.set_events(gtk.gdk.EXPOSURE_MASK |
                                      gtk.gdk.SCROLL_MASK |
@@ -80,15 +93,28 @@ class MyMapWindow(MapWindow):
         gtk.main()
 
     def selection_window(self):
-        #manual pick site
+        #manual beginning site
         site = ['Home', 31.121302, 30.018407, 'Wikimedia', 15]#wikimedia
 	
         self.controller.use_site(site, self)
         return;        
         
 
+
+    def go_to_location(self, widget):
+        self.collection.zoom_to(19,30.024471)
+        self.center_lon = 31.211283
+        self.center_lat = 30.024471
+        self.pin_lon = 31.211283
+        self.pin_lat = 30.024471
+        self.draw_map()
+        print(f'{self.center_lon}, {self.center_lat}')
+      
+
+
+
 class MyMapViewer(MapViewer):
-    def main(self, pytopo_args):
+    def main(self):
         """main execution routine for pytopo."""
         self.exec_config_file()
         # Remember how many known sites we got from the config file;
@@ -123,4 +149,4 @@ class MyMapViewer(MapViewer):
 
 
 viewer = MyMapViewer()
-viewer.main(['pytopo'])
+viewer.main()
