@@ -22,7 +22,14 @@ class MyMapWindow(MapWindow):
     #override init
     def __init__(self, _controller):
         MapWindow.__init__(self, _controller)
+
+        ad = gtk.Adjustment(value=15,lower=2,upper=19,step_increment=1,page_increment=0,page_size=0)
+
         self.go_button = gtk.Button.new_with_label("Go")
+        self.lon_entry = gtk.Entry()
+        self.lat_entry = gtk.Entry()
+        self.spin = gtk.SpinButton(adjustment=ad, climb_rate=1, digits=0)
+
 
     #override show window
     def show_window(self, init_width, init_height):
@@ -41,15 +48,31 @@ class MyMapWindow(MapWindow):
         # the initial size of the drawing area. So make the drawing area
         # initially tiny, then just before showing we'll resize the window.
         # self.drawing_area.size(10, 10)
-        grid.attach(self.drawing_area,0,0,25,25)
-        grid.attach_next_to(self.go_button,self.drawing_area,gtk.PositionType.BOTTOM,25,1)
+        grid.attach(self.drawing_area,0,0,50,50)
+        grid.attach(self.lat_entry,50,1,1,1)
+        grid.attach(self.lon_entry,50,2,1,1)
+        grid.attach(self.spin,50,3,1,1)
+        grid.attach(self.go_button,50,4,1,1)
 
+
+        #make widget fill window
         self.go_button.set_hexpand(True)
+        self.lat_entry.set_hexpand(True)
         self.drawing_area.set_vexpand(True)
+        self.drawing_area.set_hexpand(True)
         self.go_button.set_vexpand(False)
 
 
+        #change entry shapes
+        self.lat_entry.set_width_chars(10)
+        self.lon_entry.set_width_chars(10)
+        self.lat_entry.set_placeholder_text("Latitude")
+        self.lon_entry.set_placeholder_text("Longitude")
+
+        
+        #set click event for button click
         self.go_button.connect("clicked", self.go_to_location)
+
 
         self.drawing_area.set_events(gtk.gdk.EXPOSURE_MASK |
                                      gtk.gdk.SCROLL_MASK |
@@ -101,14 +124,14 @@ class MyMapWindow(MapWindow):
         
 
 
+    #this function is called when GO button is clicked 
     def go_to_location(self, widget):
-        self.collection.zoom_to(19,30.024471)
-        self.center_lon = 31.211283
-        self.center_lat = 30.024471
-        self.pin_lon = 31.211283
-        self.pin_lat = 30.024471
+        self.collection.zoom_to(self.spin.get_value_as_int() ,self.center_lat)
+        self.center_lon = float(self.lon_entry.get_text())
+        self.center_lat = float(self.lat_entry.get_text())
+        self.pin_lon = float(self.lon_entry.get_text())
+        self.pin_lat = float(self.lat_entry.get_text())
         self.draw_map()
-        print(f'{self.center_lon}, {self.center_lat}')
       
 
 
