@@ -5,16 +5,7 @@ from gi.repository import Gtk as gtk
 import pytopo.MapWindow as MapWindow
 import pytopo.MapViewer as MapViewer
 
-
-import sys
-import os
-import time
-import re
-import collections
-import glob
 import gc
-import xml.parsers.expat
-
 
 
 class MyMapWindow(MapWindow):
