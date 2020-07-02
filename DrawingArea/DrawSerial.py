@@ -6,6 +6,8 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("cairo", "1.0")
 from gi.repository import Gtk, Gdk
 from gi.repository import cairo
+from gi.repository import GdkPixbuf
+
 
 import math
 import gc
@@ -21,6 +23,9 @@ class MyWindow(Gtk.Window):
         self.angle=0
         
         self.set_default_size(600,450)
+
+        #load image into img attribute
+        self.img = GdkPixbuf.Pixbuf.new_from_file("rover.svg")
 
         grid = Gtk.Grid()
 
@@ -49,7 +54,7 @@ class MyWindow(Gtk.Window):
 
         self.dara.set_size_request(300,300)
 
-        self.dara.connect("draw",self.on_draw,[0.96,0.94,0.26])
+        self.dara.connect("draw",self.on_draw)
 
         grid.attach(self.combo,0,0,7,2)
         grid.attach(self.button,7,0,4,1)
@@ -115,7 +120,7 @@ class MyWindow(Gtk.Window):
         self.combo.set_sensitive(True)
 
 
-    def on_draw(self,widget,cr,color):
+    def on_draw(self,widget,cr):
         # get the width and height of the drawing area
         w = self.dara.get_allocated_width()
         h = self.dara.get_allocated_height()
@@ -123,13 +128,11 @@ class MyWindow(Gtk.Window):
         # move to the center of the drawing area
         # (translate from the top left corner to w/2, h/2)
         cr.translate(w / 2, h / 2)
+        cr.rotate(self.angle)
 
-        if abs(self.angle)>(math.pi/36):
-            #rotate axis
-            cr.rotate(self.angle)
-        cr.rectangle(-50, -50, 100, 100)
-        cr.set_source_rgb(color[0], color[1], color[2])
-        cr.fill()
+        #add image to cr (cairo.Context object)
+        Gdk.cairo_set_source_pixbuf(cr,self.img,-133,-100)
+        cr.paint()
 
         return True
 
