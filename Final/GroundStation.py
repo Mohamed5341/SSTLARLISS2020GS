@@ -16,6 +16,8 @@ import pytopo.TrackPoints as TrackPoints
 import gc
 import re
 
+import math
+
 
 #create class to window which is inherite from MapWindow
 class MyMapWindow(MapWindow):
@@ -34,6 +36,9 @@ class MyMapWindow(MapWindow):
         self.connected = False;
         self.started = False;
         self.angle=0
+        self.req_angle=0
+        self.r_speed=0
+        self.l_speed=0
 
         self.devices = gtk.ListStore(str, str)
         self.renderer = gtk.CellRendererText()
@@ -66,7 +71,7 @@ class MyMapWindow(MapWindow):
 
         self.load_devices()
 
-        self.dare.set_size_request(300,300)
+        self.dare.set_size_request(350,350)
 
         self.devices_combo.pack_start(self.renderer, True)
         self.devices_combo.add_attribute(self.renderer, 'text', 0)
@@ -84,11 +89,11 @@ class MyMapWindow(MapWindow):
 
         
         self.grid.attach(self.drawing_area,0,0,50,50)
-        self.grid.attach(self.dare,50,0,20,20)
-        self.grid.attach(self.devices_combo,50,46,20,1)
-        self.grid.attach(self.spin,50,47,20,1)
-        self.grid.attach(self.connect_button,50,48,20,1)
-        self.grid.attach(self.disconnect_button,50,49,20,1)
+        self.grid.attach(self.dare,50,0,21,21)
+        self.grid.attach(self.devices_combo,50,46,21,1)
+        self.grid.attach(self.spin,50,47,21,1)
+        self.grid.attach(self.connect_button,50,48,21,1)
+        self.grid.attach(self.disconnect_button,50,49,21,1)
         
 
         
@@ -153,38 +158,50 @@ class MyMapWindow(MapWindow):
 
     #this function is called when data is recived
     def get_data(self):
-        while self.connected_dev.in_waiting:
-            line =self.connected_dev.readline().decode("utf-8")
-            #check if it is GPS            
-            if line[0:3] == "GPS":
-                matchObj = re.match( r'GPS,(.*),(.*),(.*),(.*),(.*),(.*),(.*),', line)
-                if matchObj:
-                    time = float(matchObj.group(1))
-                    latitude = float(matchObj.group(2))
-                    ns = str(matchObj.group(3))
-                    longitude = float(matchObj.group(4))
-                    ew = str(matchObj.group(5))
-                    print(time, latitude, ns, longitude, ew)
-                    self.collection.zoom_to(self.spin.get_value_as_int() ,self.center_lat)
-                    self.pin_lon = float(longitude)
-                    self.pin_lat = float(latitude)
-                    if(self.started):
-                        self.trackpoints.handle_track_point(lat=latitude,lon=longitude)
+        try:
+            while self.connected_dev.in_waiting:
+                line =self.connected_dev.readline().decode("utf-8")
+                #check if it is GPS            
+                if line[0:3] == "GPS":
+                    matchObj = re.match( r'GPS,(.*),(.*),(.*),(.*),(.*),(.*),(.*),', line)
+                    if matchObj:
+                        time = float(matchObj.group(1))
+                        latitude = float(matchObj.group(2))
+                        ns = str(matchObj.group(3))
+                        longitude = float(matchObj.group(4))
+                        ew = str(matchObj.group(5))
+                        print(time, latitude, ns, longitude, ew)
+                        self.collection.zoom_to(self.spin.get_value_as_int() ,self.center_lat)
+                        self.pin_lon = float(longitude)
+                        self.pin_lat = float(latitude)
+                        if(self.started):
+                            self.trackpoints.handle_track_point(lat=latitude,lon=longitude)
+                        else:
+                            self.trackpoints.handle_track_point(lat=latitude, lon=longitude, waypoint_name="start")
+                            self.trackpoints.handle_track_point(lat=latitude,lon=longitude)
+                            self.started = True
+                        self.draw_map()
+                        self.draw_trackpoints()
                     else:
-                        self.trackpoints.handle_track_point(lat=latitude, lon=longitude, waypoint_name="start")
-                        self.trackpoints.handle_track_point(lat=latitude,lon=longitude)
-                        self.started = True
-                    self.draw_map()
-                    self.draw_trackpoints()
-                else:
+                        print(line,end='')
+                #check if it is IMU
+                elif line[0:3] == "IMU":
+                    matchObj = re.match( r'IMU,(.*),(.*),', line)
+                    if matchObj:
+                        self.angle=float(matchObj.group(1))
+                        self.req_angle=float(matchObj.group(2))
+                        self.dare.queue_draw()
                     print(line,end='')
-            #check if it is IMU
-            elif line[0:3] == "IMU":
-                matchObj = re.match( r'IMU,(.*)', line)
-                if matchObj:
-                    self.angle=float(matchObj.group(1))
-                    self.dare.queue_draw()
-                print(line,end='')
+                elif line[0:3] == "MOT":
+                    matchObj = re.match( r'MOT,(.*),(.*),', line)
+                    if matchObj:
+                        self.r_speed=int(float(matchObj.group(1))*100)
+                        self.l_speed=int(float(matchObj.group(2))*100)
+                        self.dare.queue_draw()
+                    print(line,end='')
+                
+        except:
+            pass
         return self.connected
       
 
@@ -244,10 +261,35 @@ class MyMapWindow(MapWindow):
         w = self.dare.get_allocated_width()
         h = self.dare.get_allocated_height()
 
+
+        #display required angle line
+        length = h/3
+        cr.move_to(w/2,h/2)
+        cr.line_to(w/2 - length*math.sin(self.req_angle),h/2 - length*math.cos(self.req_angle))
+        cr.stroke()
+
+
+        #display text of error
+        e = (self.req_angle-self.angle)*180.0/math.pi
+        cr.move_to((w/2+10*math.sin(self.req_angle))-20,h/2+10*math.cos(self.req_angle))
+        cr.show_text(f'e={e:.2f}')
+
+
+        #display text for motors
+        cr.translate(w / 2, h / 2)
+        cr.rotate(-self.angle)        
+        
+        cr.move_to(-80,0)
+        cr.show_text(f'{self.l_speed}%')
+
+        cr.move_to(65,0)
+        cr.show_text(f'{self.r_speed}%')
+
+
         # move to the center of the drawing area
         # (translate from the top left corner to w/2, h/2)
-        cr.translate(w / 2, h / 2)
-        cr.rotate(self.angle)
+        #cr.translate(w / 2, h / 2)
+        #cr.rotate(self.angle)
 
         #add image to cr (cairo.Context object)
         Gdk.cairo_set_source_pixbuf(cr,self.img,-133,-100)
@@ -274,6 +316,9 @@ class MyViewer(MapViewer):
         mapwin = MyMapWindow(self)
 
         mapwin.selection_window()
+
+        self.init_width = 1000
+        self.init_height = 600
 
         mapwin.show_window(self.init_width, self.init_height)
 
