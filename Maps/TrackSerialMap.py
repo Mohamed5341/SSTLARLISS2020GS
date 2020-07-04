@@ -120,7 +120,7 @@ class MyMapWindow(MapWindow):
     def go_to_location(self):
         while self.connected_dev.in_waiting:
             line =self.connected_dev.readline().decode("utf-8") 
-            matchObj = re.match( r'GPS,(.*),(.*),(.*),(.*),(.*),(.*),(.*)', line)
+            matchObj = re.match( r'GPS,(.*),(.*),(.*),(.*),(.*),(.*),(.*),', line)
             if matchObj:
                 time = float(matchObj.group(1))
                 latitude = float(matchObj.group(2))

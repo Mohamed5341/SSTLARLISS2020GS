@@ -116,7 +116,7 @@ class MyMapWindow(MapWindow):
     def go_to_location(self):
         while self.connected_dev.in_waiting:
             line =self.connected_dev.readline().decode("utf-8") 
-            matchObj = re.match( r'GPS,(.*),(.*),(.*),(.*),(.*),(.*),(.*)', line)
+            matchObj = re.match( r'GPS,(.*),(.*),(.*),(.*),(.*),(.*),(.*),', line)
             if matchObj:
                 print(float(matchObj.group(1)), float(matchObj.group(2)), str(matchObj.group(3)), float(matchObj.group(4)), str(matchObj.group(5)))
                 self.collection.zoom_to(self.spin.get_value_as_int() ,self.center_lat)
